@@ -1,88 +1,141 @@
 import pygame
 import math
-import time
+import sys
 
 # Initialize Pygame
 pygame.init()
 
-# Screen dimensions
+# Screen settings
 WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("A Dance of Fire and Ice")
+pygame.display.set_caption("A Dance of Fire and Ice - Alternating Balls")
 
 # Colors
+BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
-BLACK = (0, 0, 0)
 
-# Circle properties
-radius = 20
-orbit_radius = 100
-angle = 0
-speed = 0.05
+# Clock and FPS
+clock = pygame.time.Clock()
+FPS = 60
 
-# Path properties
-path = [(WIDTH // 2, HEIGHT // 2)]
-for i in range(1, 20):
-    path.append((WIDTH // 2 + i * 40, HEIGHT // 2 + (i % 2) * 80 - 40))
+# Path points
+PATH = [
+    (200, 300), (300, 300), (400, 300), (500, 300), (600, 300), (700, 300)
+]
 
-# Scoring
+# Orbital movement settings
+ORBIT_RADIUS = 50
+BALL_RADIUS = 15
+
+# Timing settings
+BEATS_PER_SECOND = 1.5
+BEAT_INTERVAL = 1 / BEATS_PER_SECOND
+
+# State variables
+last_beat_time = 0
+current_angle = 0
+current_path_index = 0
 score = 0
+missed = 0
+game_over = False
+
+# Ball alternation state
+is_blue_orbiting = True  # If True, Blue ball is orbiting; else Red ball is orbiting
+
+
+def reset_game():
+    """Reset game state to the initial conditions."""
+    global last_beat_time, current_angle, current_path_index, score, missed, game_over, is_blue_orbiting
+    last_beat_time = 0
+    current_angle = 0
+    current_path_index = 0
+    score = 0
+    missed = 0
+    game_over = False
+    is_blue_orbiting = True
+
+
+# Initialize the game
+reset_game()
+
+# Font for text
 font = pygame.font.Font(None, 36)
 
-# Music
-music_file = r"C:\Users\weichen.fang24\Documents\GitHub\hackathon-fall-wilson-matthew-sam\your_music_file.mp3"
-pygame.mixer.init()
-pygame.mixer.music.load(music_file)
-pygame.mixer.music.play(-1)
 
-# Clock
-clock = pygame.time.Clock()
+def display_text(text, x, y, color=WHITE):
+    """Display text on the screen."""
+    label = font.render(text, True, color)
+    screen.blit(label, (x, y))
+
 
 # Game loop
 running = True
 while running:
+    screen.fill(BLACK)
+
+    # Handle events
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
-                # Check if the circles are in sync with the path
-                if math.isclose(angle % (2 * math.pi), 0, abs_tol=0.1):
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r and game_over:
+                reset_game()  # Reset the game on R key press
+            if event.key == pygame.K_SPACE and not game_over:
+                elapsed_time = pygame.time.get_ticks() / 1000
+                # Check if the orbiting ball is aligned with the path
+                if abs(elapsed_time - last_beat_time) < 0.2:
                     score += 1
+                    # Move to the next point in the path
+                    current_path_index += 1
+                    if current_path_index >= len(PATH):
+                        current_path_index = 0  # Loop back to the start of the path
+                    is_blue_orbiting = not is_blue_orbiting  # Switch orbiting ball
+                    last_beat_time = elapsed_time
                 else:
-                    score -= 1
+                    missed += 1
+                    game_over = True
 
-    # Clear screen
-    screen.fill(WHITE)
+    # Beat generation
+    elapsed_time = pygame.time.get_ticks() / 1000
+    if elapsed_time - last_beat_time >= BEAT_INTERVAL:
+        last_beat_time = elapsed_time
 
-    # Draw path
-    for point in path:
-        pygame.draw.circle(screen, BLACK, point, 5)
+    # Update orbital angle
+    current_angle += 2 * math.pi / (FPS * BEAT_INTERVAL)
+    if current_angle >= 2 * math.pi:
+        current_angle -= 2 * math.pi
 
-    # Calculate positions
-    x1 = WIDTH // 2 + orbit_radius * math.cos(angle)
-    y1 = HEIGHT // 2 + orbit_radius * math.sin(angle)
-    x2 = WIDTH // 2 + orbit_radius * math.cos(angle + math.pi)
-    y2 = HEIGHT // 2 + orbit_radius * math.sin(angle + math.pi)
+    # Get the current stationary ball position
+    stationary_x, stationary_y = PATH[current_path_index]
 
-    # Draw circles
-    pygame.draw.circle(screen, RED, (int(x1), int(y1)), radius)
-    pygame.draw.circle(screen, BLUE, (int(x2), int(y2)), radius)
+    # Calculate the orbiting ball position
+    orbiting_x = stationary_x + ORBIT_RADIUS * math.cos(current_angle)
+    orbiting_y = stationary_y + ORBIT_RADIUS * math.sin(current_angle)
 
-    # Update angle
-    angle += speed
+    # Draw the path
+    for i in range(len(PATH) - 1):
+        pygame.draw.line(screen, WHITE, PATH[i], PATH[i + 1], 2)
 
-    # Draw score
-    score_text = font.render(f"Score: {score}", True, BLACK)
-    screen.blit(score_text, (10, 10))
+    # Draw the stationary ball
+    stationary_color = BLUE if is_blue_orbiting else RED
+    pygame.draw.circle(screen, stationary_color, (stationary_x, stationary_y), BALL_RADIUS)
+
+    # Draw the orbiting ball
+    orbiting_color = RED if is_blue_orbiting else BLUE
+    pygame.draw.circle(screen, orbiting_color, (int(orbiting_x), int(orbiting_y)), BALL_RADIUS)
+
+    # Display score and missed beats
+    display_text(f"Score: {score}", 10, 10)
+    display_text(f"Missed: {missed}", 10, 50)
+    if game_over:
+        display_text("Game Over! Press R to Restart", 200, 500, RED)
 
     # Update display
     pygame.display.flip()
+    clock.tick(FPS)
 
-    # Cap the frame rate
-    clock.tick(60)
-
-# Quit Pygame
 pygame.quit()
+sys.exit()
