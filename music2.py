@@ -28,32 +28,31 @@ valid_keys = ['d', 'f', 'j', 'k']
 
 # Define game parameters
 note_speed = 2  # Slower note speed to make the notes fall more slowly
-note_size = 100  # Size of the notes (larger notes)
+note_size = 120  # Increased size of the notes for larger hitbox
 menu_position = screen_height - 100  # Position of the bottom menu
 
 # Define timing parameters
-perfect_window = 0.8  # Increased ideal time window (in seconds) for perfect press
-late_early_window = 1.5  # Increased window for late/early presses (in seconds)
+perfect_window = 1.2  # Increased ideal time window (in seconds) for perfect press
+late_early_window = 2.0  # Increased window for late/early presses (in seconds)
 cooldown_time = 0.5  # Cooldown time for key presses (in seconds)
+
+# Predefined spawn positions for the notes (x positions for each note key)
+spawn_positions = {
+    'd': 200,
+    'f': 300,
+    'j': 500,
+    'k': 600
+}
 
 # Define the Note class to represent the keys that need to be pressed
 class Note:
     def __init__(self, key, y_position, spawn_time):
         self.key = key
         self.y = y_position
-        self.x = 0  # Initially place it off-screen
+        self.x = spawn_positions[key]  # Use the predefined spawn position based on the key
         self.spawn_time = spawn_time  # Time when the note should ideally be pressed
-        self.indicator = None  # To store the indicator text ("Perfect", "Early", "Late", "Missing")
+        self.indicator = None  # To store the indicator text ("Perfect", "Early", "Late", "Miss")
         self.indicator_time = 0  # Time when the indicator should disappear
-
-        if key == 'd':
-            self.x = 200
-        elif key == 'f':
-            self.x = 300
-        elif key == 'j':
-            self.x = 500
-        elif key == 'k':
-            self.x = 600
 
         self.height = note_size  # Set the note height based on the larger size
         self.width = note_size  # Set the note width based on the larger size
@@ -71,7 +70,8 @@ class Note:
         # Draw the indicator if available and still active
         if self.indicator and time.time() - self.indicator_time < 0.5:  # Display for 0.5 seconds
             indicator_surface = indicator_font.render(self.indicator, True, BLUE)
-            screen.blit(indicator_surface, (self.x + self.width, self.y))
+            # Position the indicator above the note
+            screen.blit(indicator_surface, (self.x + self.width + 5, self.y - 30))  # Adjust to above the note
 
 # Function to draw the bottom menu with key indicators
 def draw_menu(note_results):
@@ -103,12 +103,10 @@ def game_loop():
     notes = []
     key_presses = []
     note_results = {'d': "", 'f': "", 'j': "", 'k': ""}  # Track results for each key
+    key_cooldowns = {key: 0 for key in valid_keys}  # Initialize cooldowns for each key
     start_time = time.time()  # Time when the game starts
     rhythm_timing = [1.0, 1.5, 2.0, 2.5, 3.0]  # Rhythm interval times (in seconds)
     current_time = 0
-
-    # Dictionary to track cooldown for each key
-    last_press_time = {key: 0 for key in valid_keys}
 
     while running:
         screen.fill(WHITE)
@@ -119,11 +117,8 @@ def game_loop():
                 running = False
             elif event.type == pygame.KEYDOWN:
                 key = pygame.key.name(event.key)
-                if key in valid_keys:
-                    # Check cooldown for the key
-                    if time.time() - last_press_time[key] >= cooldown_time:
-                        key_presses.append((key, time.time() - start_time))
-                        last_press_time[key] = time.time()  # Update the last press time for the key
+                if key in valid_keys and time.time() - key_cooldowns[key] > cooldown_time:
+                    key_presses.append((key, time.time() - start_time))
 
         # Calculate how much time has passed to ramp up note speed
         current_time = time.time() - start_time
@@ -131,6 +126,7 @@ def game_loop():
 
         # Create new notes at predefined times based on rhythm_timing
         if rhythm_timing and current_time >= rhythm_timing[0]:
+            # Randomly select a key for the note to spawn
             key = random.choice(valid_keys)
             notes.append(Note(key, 0, rhythm_timing[0]))  # Create a new note at the top
             rhythm_timing.pop(0)  # Remove the last rhythm timing and generate a new one
@@ -145,7 +141,11 @@ def game_loop():
         for note in notes[:]:
             if note.y >= menu_position:  # If note reaches the menu area
                 notes.remove(note)  # Remove the note
-                # Check for key press within the acceptable timing window
+                note_results[note.key] = "Miss"  # Mark this note as "Miss" if it reaches the bottom
+
+        # Check for key presses and if they match with notes
+        for note in notes[:]:
+            if note.y >= menu_position:  # Only check key press if note is within the menu area
                 matching_presses = [x for x in key_presses if x[0] == note.key and abs(x[1] - note.spawn_time) < late_early_window]
                 if matching_presses:
                     # Find the most recent press for this key
@@ -165,18 +165,9 @@ def game_loop():
                             note.indicator = "Late"
                             note_results[note.key] = "Late"
                         note.indicator_time = time.time()  # Set the time for the indicator to disappear
+                    # Reset cooldown for this key on a successful hit
+                    key_cooldowns[note.key] = time.time()
                     key_presses = [x for x in key_presses if x[0] != note.key]  # Remove key press from queue
-                    last_press_time[note.key] = 0  # Reset the cooldown for the successfully pressed key
-                else:
-                    missed_notes += 1  # Count missed notes
-                    note_results[note.key] = "Missing"  # Store "Missing" in the menu for that key
-
-        # Handle missed key presses (key pressed at the wrong time or no note to match)
-        for key, press_time in key_presses[:]:
-            if all(abs(press_time - note.spawn_time) > late_early_window for note in notes if note.key == key):
-                missed_notes += 1
-                key_presses = [x for x in key_presses if x != (key, press_time)]  # Remove the missed key press
-                note_results[key] = "Missing"  # Store "Missing" for the missed key
 
         # Draw the bottom menu with key indicators
         draw_menu(note_results)
