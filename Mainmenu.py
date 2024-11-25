@@ -106,3 +106,4 @@ def main():
 
 # Run the main function to start the game
 main()
+print("🤓")

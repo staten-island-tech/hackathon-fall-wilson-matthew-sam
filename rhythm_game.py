@@ -47,6 +47,18 @@ miss_sound.set_volume(0.2)
 # Start background music loop
 pygame.mixer.music.play(-1, 0.0)  # Loop the background music indefinitely
 
+
+for event in pygame.event.get():
+        
+            
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_q:
+                # Transition to Mainmenu or perform any desired action
+                import Mainmenu  # Assuming Mainmenu has a show() function
+
+    # Update game state, render game, etc.
+pygame.display.update()
+
 # Define the Note class to represent the keys that need to be pressed
 class Note:
     def __init__(self, key, y_position, spawn_time):
@@ -197,6 +209,8 @@ def game_loop():
         # Draw score and missed notes count
         display_text(f'Score: {score}', BLACK, 20)
         display_text(f'Missed Notes: {missed_notes}', BLACK, 60)
+
+
 
         # Update the screen
         pygame.display.update()
