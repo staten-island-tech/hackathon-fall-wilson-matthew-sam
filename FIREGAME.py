@@ -27,6 +27,11 @@ hit_sound = pygame.mixer.Sound('hit_sound.wav')  # Replace with your file path
 miss_sound = pygame.mixer.Sound('miss_sound.wav')  # Replace with your file path
 miss_sound.set_volume(0.2)
 
+
+# Start background music loop
+pygame.mixer.music.play(-1, 0.0)  # Loop the background music indefinitely
+
+
 # Path points
 PATH = [
     (200, 300), (300, 300), (400, 300), (500, 300), (600, 300), (700, 300)
@@ -95,6 +100,7 @@ while running:
                 # Check if the orbiting ball is aligned with the path
                 if abs(elapsed_time - last_beat_time) < 0.2:
                     score += 1
+                    hit_sound.play()
                     # Move to the next point in the path
                     current_path_index += 1
                     if current_path_index >= len(PATH):
@@ -102,6 +108,7 @@ while running:
                     is_blue_orbiting = not is_blue_orbiting  # Switch orbiting ball
                     last_beat_time = elapsed_time
                 else:
+                    miss_sound.play()
                     missed += 1
                     game_over = True
 
