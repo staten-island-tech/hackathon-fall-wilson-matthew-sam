@@ -37,11 +37,19 @@ class Dino:
         self.height = 50
         self.velocity = 0
         self.gravity = 1
-        self.jump_power = -20  # Higher jump power
         self.is_jumping = False
         self.alive = True  # Track whether the dino is alive or dead
         self.flip_over = False  # Track whether the dino is flipped over
         self.particles = []  # Red particles for death effect
+        self.jump_power = -20  # Short jump power
+        self.max_jump_power = -60  # High jump power (double the short jump)
+        self.short_jump_height = 80  # Short jump height
+        self.high_jump_height = 160  # High jump height
+        self.jump_start_time = None  # To track how long spacebar is held
+        self.jump_time_threshold = 1000  # Threshold for high jump (1 second)
+        self.is_high_jump = False  # Track whether it's a high jump or short jump
+        self.jump_cooldown = 0  # Cooldown timer for jump (in milliseconds)
+        self.max_cooldown = 500  # Max cooldown time (500ms = 0.5 seconds)
 
     def move(self):
         if self.is_jumping:
@@ -51,11 +59,24 @@ class Dino:
                 self.y = HEIGHT - 70
                 self.is_jumping = False
                 self.velocity = 0
+                self.jump_cooldown = 0  # Reset cooldown when touching the ground
 
     def jump(self):
-        if not self.is_jumping and self.alive:
+        if not self.is_jumping and self.alive and self.jump_cooldown == 0:
             self.is_jumping = True
             self.velocity = self.jump_power
+            self.jump_start_time = pygame.time.get_ticks()  # Start tracking time when spacebar is pressed
+
+    def release_jump(self):
+        if self.is_jumping and self.jump_start_time is not None:
+            hold_time = pygame.time.get_ticks() - self.jump_start_time  # Calculate how long the spacebar was held
+            if hold_time >= self.jump_time_threshold:  # If held for more than 1 second, perform a high jump
+                self.velocity = self.max_jump_power
+                self.is_high_jump = True
+            else:  # Perform a short jump otherwise
+                self.velocity = self.jump_power
+                self.is_high_jump = False
+            self.jump_cooldown = self.max_cooldown  # Set the cooldown after the jump
 
     def die(self):
         self.alive = False
@@ -132,35 +153,58 @@ class Obstacle:
             return True
         return False
 
+# Define the meteor class (for meteors falling from the sky)
+class Meteor:
+    def __init__(self, x, speed):
+        self.x = x
+        self.y = -30  # Start above the screen
+        self.size = random.randint(20, 40)
+        self.speed = speed
+
+    def move(self):
+        self.y += self.speed
+
+    def draw(self, screen):
+        pygame.draw.circle(screen, METEOR_COLOR, (self.x, self.y), self.size)  # Meteor is a circle
+
+    def is_colliding(self, dino):
+        # Check for collision with the dino
+        if (self.x - self.size < dino.x + dino.width and
+            self.x + self.size > dino.x and
+            self.y - self.size < dino.y + dino.height):
+            return True
+        return False
+
 # Define the lava class
 class Lava:
     def __init__(self, volcano_x):
         self.x = volcano_x
-        self.y = HEIGHT - 40  # Same ground level
-        self.width = random.randint(20, 50)
-        self.height = random.randint(10, 30)
-        self.speed = 3
+        self.y = HEIGHT - 40  # Start at the ground level
+        self.width = random.randint(30, 50)
+        self.height = random.randint(10, 20)
+        self.speed = 5
 
     def move(self):
         self.x -= self.speed
 
     def draw(self, screen):
-        pygame.draw.rect(screen, LAVA_COLOR, (self.x, self.y - self.height, self.width, self.height))
+        pygame.draw.rect(screen, LAVA_COLOR, (self.x, self.y - self.height, self.width, self.height))  # Lava rectangle
 
     def is_colliding(self, dino):
         # Check for collision with the dino
         if (self.x < dino.x + dino.width and
             self.x + self.width > dino.x and
-            self.y - self.height < dino.y + dino.height and
-            self.y > dino.y):
+            self.y - self.height < dino.y + dino.height):
             return True
         return False
 
-# Define the volcano class
+# Define the volcano class (for lava eruption)
 class Volcano:
     def __init__(self):
-        self.x = random.randint(WIDTH // 2, WIDTH - 100)
-        self.y = HEIGHT - 100  # Volcanos are placed higher
+        self.x = WIDTH - 100
+        self.y = HEIGHT - 100
+        self.width = 100
+        self.height = 50
         self.active = False
 
     def activate(self):
@@ -168,37 +212,9 @@ class Volcano:
 
     def draw(self, screen):
         if self.active:
-            pygame.draw.polygon(screen, (139, 69, 19), [(self.x, self.y), (self.x + 50, self.y - 50), (self.x + 100, self.y)])  # Draw volcano
+            pygame.draw.polygon(screen, (139, 69, 19), [(self.x, self.y), (self.x + self.width, self.y), (self.x + self.width // 2, self.y - self.height)])  # Volcano shape
 
-# Define the meteor class
-class Meteor:
-    def __init__(self, x, speed):
-        self.x = x
-        self.y = random.randint(0, HEIGHT // 2)  # Randomize the meteor's starting height
-        self.size = random.randint(20, 40)  # Random meteor size
-        self.speed = speed
-        self.exploded = False
-
-    def move(self):
-        self.x -= self.speed  # Meteor moves left
-
-    def draw(self, screen):
-        pygame.draw.circle(screen, METEOR_COLOR, (self.x, self.y), self.size)  # Draw the meteor
-
-    def is_colliding(self, dino):
-        # Check if the meteor is colliding with the dino
-        if (self.x - self.size < dino.x + dino.width and
-            self.x + self.size > dino.x and
-            self.y - self.size < dino.y + dino.height and
-            self.y + self.size > dino.y):
-            return True
-        return False
-
-    def explode(self):
-        # Simulate an explosion when the meteor hits the ground
-        self.exploded = True
-
-# Function to display hearts
+# Function to display hearts (lives)
 def draw_lives(screen, lives):
     for i in range(3):
         if i < lives:
@@ -227,8 +243,12 @@ def game_loop():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE and dino.alive:
                     dino.jump()
-                if event.key == pygame.K_r and not dino.alive:
-                    game_loop()  # Restart the game
+                if event.key == pygame.K_r and not dino.alive:  # Restart game when 'R' is pressed after game over
+                    game_loop()
+
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_SPACE and dino.alive:
+                    dino.release_jump()  # Release jump when spacebar is released
 
         # Moving and drawing dino
         if dino.alive:
@@ -259,7 +279,7 @@ def game_loop():
                 if lives == 0:
                     dino.die()
 
-        # Handle meteors (same logic)
+        # Handle meteors
         if random.randint(1, 100) == 1:
             meteors.append(Meteor(WIDTH, 5))
 
