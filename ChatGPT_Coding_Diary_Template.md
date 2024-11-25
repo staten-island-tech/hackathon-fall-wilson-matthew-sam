@@ -45,14 +45,7 @@ Draw Both Balls: Continuously update the display.
 
 ## 5. **Reflection on Changes**
 
-Reflect on the changes made to your code after ChatGPT's suggestions. Answer the following questions:
-
-- Why do you think ChatGPT's suggestions are helpful or relevant?
-- Did the suggestions improve your code? How?
-- Did you understand why the changes were made, or are you still uncertain about some parts?
-
-Example:
-> ChatGPT recommended using a more efficient sorting algorithm like quicksort. I think this will improve the runtime for large inputs, but I need to review the algorithm's complexity to fully understand its advantages.
+ChatGPT utlized more efficient codes and algorithm which reduced my original code by a few lines.
 
 ---
 

@@ -15,6 +15,8 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
+GREEN = (0, 255, 0)
+RED_FLASH = (255, 0, 0)
 
 # Clock and FPS
 clock = pygame.time.Clock()
@@ -40,14 +42,12 @@ current_path_index = 0
 score = 0
 missed = 0
 game_over = False
-
-# Ball alternation state
 is_blue_orbiting = True  # If True, Blue ball is orbiting; else Red ball is orbiting
-
+hit_feedback_time = 0  # For showing hit/miss feedback
 
 def reset_game():
     """Reset game state to the initial conditions."""
-    global last_beat_time, current_angle, current_path_index, score, missed, game_over, is_blue_orbiting
+    global last_beat_time, current_angle, current_path_index, score, missed, game_over, is_blue_orbiting, hit_feedback_time
     last_beat_time = 0
     current_angle = 0
     current_path_index = 0
@@ -55,6 +55,7 @@ def reset_game():
     missed = 0
     game_over = False
     is_blue_orbiting = True
+    hit_feedback_time = 0
 
 
 # Initialize the game
@@ -62,7 +63,6 @@ reset_game()
 
 # Font for text
 font = pygame.font.Font(None, 36)
-
 
 def display_text(text, x, y, color=WHITE):
     """Display text on the screen."""
@@ -94,19 +94,21 @@ while running:
                         current_path_index = 0  # Loop back to the start of the path
                     is_blue_orbiting = not is_blue_orbiting  # Switch orbiting ball
                     last_beat_time = elapsed_time
+                    hit_feedback_time = pygame.time.get_ticks()  # Set hit feedback time
                 else:
                     missed += 1
                     game_over = True
 
-    # Beat generation
+    # Beat generation - Move to the next beat when enough time has passed
     elapsed_time = pygame.time.get_ticks() / 1000
     if elapsed_time - last_beat_time >= BEAT_INTERVAL:
         last_beat_time = elapsed_time
 
-    # Update orbital angle
-    current_angle += 2 * math.pi / (FPS * BEAT_INTERVAL)
-    if current_angle >= 2 * math.pi:
-        current_angle -= 2 * math.pi
+    # Update orbital angle based on beat timing
+    if pygame.time.get_ticks() - hit_feedback_time > 150:  # Reset hit feedback after 150ms
+        current_angle += 2 * math.pi / (FPS * BEAT_INTERVAL)
+        if current_angle >= 2 * math.pi:
+            current_angle -= 2 * math.pi
 
     # Get the current stationary ball position
     stationary_x, stationary_y = PATH[current_path_index]
@@ -126,6 +128,11 @@ while running:
     # Draw the orbiting ball
     orbiting_color = RED if is_blue_orbiting else BLUE
     pygame.draw.circle(screen, orbiting_color, (int(orbiting_x), int(orbiting_y)), BALL_RADIUS)
+
+    # Flash red if a miss
+    if hit_feedback_time and (pygame.time.get_ticks() - hit_feedback_time) < 150:
+        # Flash red for missed beats
+        pygame.draw.rect(screen, RED_FLASH, (0, 0, WIDTH, HEIGHT))
 
     # Display score and missed beats
     display_text(f"Score: {score}", 10, 10)
