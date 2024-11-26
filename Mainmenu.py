@@ -85,7 +85,7 @@ def rhythm_game():
 
 # Alternating Balls Game (Placeholder)
 def alternating_balls_game():
-    import FIREGAME
+    import ballgame
     screen.fill(BLACK)
     pygame.display.update()
     print("Starting Alternating Balls Game...")

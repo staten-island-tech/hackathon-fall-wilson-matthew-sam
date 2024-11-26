@@ -40,21 +40,14 @@ cooldown_time = 0.5  # Cooldown time for key presses (in seconds)
 # Load sounds
 background_music = pygame.mixer.music.load('background_music.mp3')  # Replace with your file path
 hit_sound = pygame.mixer.Sound('hit_sound.wav')  # Replace with your file path
-miss_sound = pygame.mixer.Sound('miss_sound.wav')  # Replace with your file path
-miss_sound.set_volume(0.2)
+miss_sound = pygame.mixer.Sound('vine.wav')  # Replace with your file path
+miss_sound.set_volume(0.8)
 
 
 # Start background music loop
 pygame.mixer.music.play(-1, 0.0)  # Loop the background music indefinitely
 
 
-for event in pygame.event.get():
-        
-            
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_q:
-                # Transition to Mainmenu or perform any desired action
-                import Mainmenu  # Assuming Mainmenu has a show() function
 
     # Update game state, render game, etc.
 pygame.display.update()
