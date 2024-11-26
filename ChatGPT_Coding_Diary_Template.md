@@ -15,7 +15,7 @@ I am currently working on creating a game on python pygame where the mechanics a
 
 ## 2. **Initial Approach/Code**
 
-N/A
+My intial approach were to make a rhythm game where the player has to press space bar at the correct timing to proceed and the beats are song based.
 
 ---
 
@@ -51,7 +51,7 @@ ChatGPT utlized more efficient codes and algorithm which reduced my original cod
 
 ## 6. **Testing and Results**
 
-After making the changes, did you test your code? What were the results?
+After changing my code according to ChatGPT's suggestions, I found bugs where the player was able to spam for the win.
 
 - Did you run any tests (e.g., unit tests, edge cases)?
 - Did the code work as expected after incorporating ChatGPT's changes?
@@ -63,7 +63,7 @@ print(optimized_sort(numbers))  # Expected output: [1, 2, 5, 9]
 ```
 
 - Did you encounter any bugs or issues during testing?
-
+Yes, there were bugs where the player was able to spam in order to gain scores
 ---
 
 ## 7. **What Did You Learn?**
