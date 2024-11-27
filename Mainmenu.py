@@ -66,6 +66,7 @@ def main_menu():
                     return  # Start Rhythm Game
                 elif event.key == pygame.K_2:  # Select Alternating Balls
                     current_game = "alternating_balls"
+                    import ballgame
                     return  # Start Alternating Balls
 
                 elif event.key == pygame.K_q:  # Quit the game
@@ -85,7 +86,6 @@ def rhythm_game():
 
 # Alternating Balls Game (Placeholder)
 def alternating_balls_game():
-    import ballgame
     screen.fill(BLACK)
     pygame.display.update()
     print("Starting Alternating Balls Game...")
@@ -106,4 +106,3 @@ def main():
 
 # Run the main function to start the game
 main()
-print("🤓")
