@@ -53,14 +53,8 @@ ChatGPT utlized more efficient codes and algorithm which reduced my original cod
 
 After changing my code according to ChatGPT's suggestions, I found bugs where the player was able to spam for the win.
 
-- Did you run any tests (e.g., unit tests, edge cases)?
 - Did the code work as expected after incorporating ChatGPT's changes?
-
-```python
-# Example: Testing the updated sorting function
-numbers = [5, 2, 9, 1]
-print(optimized_sort(numbers))  # Expected output: [1, 2, 5, 9]
-```
+Not really, ChatGPT sometimes doesn't understand what it was supposed to do and assume which creates unexpected results that could be good or bad
 
 - Did you encounter any bugs or issues during testing?
 Yes, there were bugs where the player was able to spam in order to gain scores
@@ -68,9 +62,4 @@ Yes, there were bugs where the player was able to spam in order to gain scores
 
 ## 7. **What Did You Learn?**
 
-In this section, reflect on what you learned from this coding session. Did you gain any new insights, or were there areas you still struggled with? 
-
-Example:
-> I learned how to implement an efficient sorting algorithm, and I now understand the time complexity differences between various sorting methods.
-
----
+I learned the flexibility of coding and the ability to utilize ChatGPT as a useful tool to help me reach my goals.
