@@ -12,10 +12,6 @@ pygame.mixer.init()
 class SoundManager:
     sounds = [] # list of sound objects
 
-    @staticmethod
-    def playRandom():
-        random.choice(SoundManager.sounds).play()
-
 background_music = pygame.mixer.music.load('background_music.mp3')  # Replace with your file path
 hit_sound = pygame.mixer.Sound('hit_sound.wav')  # Replace with your file path
 miss_sound = pygame.mixer.Sound('miss_sound.wav')  # Replace with your file path
@@ -168,3 +164,5 @@ while running:
 
 pygame.quit()
 sys.exit()
+
+"""l"""
