@@ -67,7 +67,7 @@ class Dino:
 
         # Prevent the dino from moving above a certain barrier level
         if self.y < BARRIER_LEVEL:
-            self.y = HEIGHT - 20  # Push the dino back down to the ground
+            self.y = HEIGHT - 70  # Push the dino back down to the ground
 
     def jump(self):
         # Only allow jumping if the dino isn't already jumping and it's alive
