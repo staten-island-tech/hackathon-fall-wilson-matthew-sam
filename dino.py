@@ -53,6 +53,9 @@ class Dino:
         self.is_high_jump = False  # Track whether it's a high jump or short jump
         self.jump_cooldown = 0  # Cooldown timer for jump (in milliseconds)
         self.max_cooldown = 500  # Max cooldown time (500ms = 0.5 seconds)
+        self.invincible = False  # Track whether the dino is invincible
+        self.invincibility_time = 0  # Time when invincibility starts
+        self.invincibility_duration = 1000  # Invincibility lasts for 1000 ms (1 second)
 
     def move(self):
         if self.is_jumping:
@@ -76,40 +79,18 @@ class Dino:
             self.velocity = self.jump_power  # Apply initial jump force
             self.jump_start_time = pygame.time.get_ticks()  # Track when the spacebar is pressed
 
-    def release_jump(self):
-        # If spacebar is released, adjust the jump height based on how long the spacebar was held
-        if self.is_jumping and self.jump_start_time is not None:
-            hold_time = pygame.time.get_ticks() - self.jump_start_time  # Calculate the duration of the hold
+    def take_damage(self):
+        # Only allow the dino to take damage if it is not invincible
+        if not self.invincible:
+            self.invincible = True  # Activate invincibility
+            self.invincibility_time = pygame.time.get_ticks()  # Start invincibility timer
+            return True  # Damage is successfully taken
+        return False  # No damage taken if invincible
 
-            # If the spacebar was held for more than 1 second, perform a high jump
-            if hold_time >= self.jump_time_threshold:
-                self.velocity = self.max_jump_power
-                self.is_high_jump = True
-            else:  # Otherwise, perform a short jump
-                self.velocity = self.jump_power
-                self.is_high_jump = False
-
-            self.jump_cooldown = self.max_cooldown  # Set a cooldown after the jump
-
-    def die(self):
-        self.alive = False
-        self.flip_over = True
-        self.generate_death_particles()
-
-    def generate_death_particles(self):
-        # Generate red particles for the death effect
-        for _ in range(100):
-            angle = random.uniform(0, 2 * math.pi)
-            velocity = random.uniform(1, 3)
-            particle = {
-                "x": self.x + self.width // 2,
-                "y": self.y + self.height // 2,
-                "dx": velocity * math.cos(angle),
-                "dy": velocity * math.sin(angle),
-                "size": random.randint(3, 7),
-                "color": PARTICLE_COLOR
-            }
-            self.particles.append(particle)
+    def update_invincibility(self):
+        # Check if invincibility duration has expired
+        if self.invincible and pygame.time.get_ticks() - self.invincibility_time > self.invincibility_duration:
+            self.invincible = False  # Reset invincibility
 
     def draw(self, screen):
         if self.alive:
@@ -131,7 +112,7 @@ class Dino:
             pygame.draw.rect(screen, DINO_BODY, (self.x + 10, self.y + 40, 15, 20))
             pygame.draw.rect(screen, DINO_BODY, (self.x + 25, self.y + 40, 15, 20))
         else:
-            # If the dino is dead, flip over and draw particles
+            # If the dino is dead, flip over only after losing all lives
             if self.flip_over:
                 pygame.draw.rect(screen, DINO_BODY, (self.x, self.y, self.width, self.height))
                 self.y += 10  # Move the dino down as it flips over
@@ -142,6 +123,7 @@ class Dino:
                 particle["y"] += particle["dy"]
                 particle["size"] = max(0, particle["size"] - 0.1)  # Shrink particles over time
                 pygame.draw.circle(screen, particle["color"], (particle["x"], particle["y"]), particle["size"])
+
 # Define the obstacle class (for ground and other obstacles)
 class Obstacle:
     def __init__(self, x, speed):
@@ -170,14 +152,14 @@ class Meteor:
     def __init__(self, x, speed):
         self.x = x
         self.y = -30  # Start above the screen
-        self.size = random.randint(20, 40)
+        self.size = random.randint(10, 30)
         self.speed = speed
 
     def move(self):
         self.y += self.speed
 
     def draw(self, screen):
-        pygame.draw.circle(screen, METEOR_COLOR, (self.x, self.y), self.size)  # Meteor is a circle
+        pygame.draw.circle(screen, METEOR_COLOR, (self.x, self.y), self.size)
 
     def is_colliding(self, dino):
         # Check for collision with the dino
@@ -187,13 +169,13 @@ class Meteor:
             return True
         return False
 
-# Define the lava class
+# Define the lava class (lava blocks falling from volcano)
 class Lava:
     def __init__(self, volcano_x):
         self.x = volcano_x
-        self.y = HEIGHT - 40  # Start at the ground level
-        self.width = random.randint(30, 50)
-        self.height = random.randint(10, 20)
+        self.y = HEIGHT - 70  # Lava starts from the ground level
+        self.width = 30
+        self.height = 10
         self.speed = 5
 
     def move(self):
@@ -210,29 +192,21 @@ class Lava:
             return True
         return False
 
-# Define the volcano class (for lava eruption)
+# Define the volcano class (for lava generation)
 class Volcano:
     def __init__(self):
-        self.x = WIDTH - 100
-        self.y = HEIGHT - 100
-        self.width = 100
-        self.height = 50
-        self.active = False
+        self.x = WIDTH - 100  # Position at the right edge of the screen
+        self.y = HEIGHT - 100  # Position above the ground
+        self.width = 50
+        self.height = 30
+        self.speed = 5  # Speed at which lava spawns
 
-    def activate(self):
-        self.active = True
+    def move(self):
+        # The volcano stays stationary, but it can still move other objects (like lava)
+        pass
 
     def draw(self, screen):
-        if self.active:
-            pygame.draw.polygon(screen, (139, 69, 19), [(self.x, self.y), (self.x + self.width, self.y), (self.x + self.width // 2, self.y - self.height)])  # Volcano shape
-
-# Function to display hearts (lives)
-def draw_lives(screen, lives):
-    for i in range(3):
-        if i < lives:
-            pygame.draw.circle(screen, HEART_COLOR, (WIDTH - 20 - i * 40, 20), 15)  # Red hearts
-        else:
-            pygame.draw.circle(screen, EMPTY_HEART_COLOR, (WIDTH - 20 - i * 40, 20), 15)  # Empty hearts
+        pygame.draw.rect(screen, BROWN, (self.x, self.y, self.width, self.height))  # Volcano rectangle
 
 # Game loop
 def game_loop():
@@ -245,97 +219,102 @@ def game_loop():
     score = 0
     clock = pygame.time.Clock()
     run_game = True
+    game_over = False  # Track game over state
 
     while run_game:
         screen.fill(DAY_COLOR if score % 2 == 0 else NIGHT_COLOR)  # Day/Night cycle
+
+        # Draw lives counter
+        for i in range(lives):
+            pygame.draw.circle(screen, HEART_COLOR, (WIDTH - 40 - (i * 30), 20), 10)
+        for i in range(3 - lives):
+            pygame.draw.circle(screen, EMPTY_HEART_COLOR, (WIDTH - 40 - (i * 30), 20), 10)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run_game = False
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE and dino.alive:
-                    dino.jump()
-                if event.key == pygame.K_r and not dino.alive:  # Restart game when 'R' is pressed after game over
+                if event.key == pygame.K_SPACE and dino.alive and not game_over:
+                    dino.jump()  # Jump only when the spacebar is initially pressed
+                if event.key == pygame.K_r and not dino.alive and lives > 0:  # Restart game when 'R' is pressed
                     game_loop()
+                elif event.key == pygame.K_r and not dino.alive and lives == 0:  # Exit game after all lives are gone
+                    run_game = False
 
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_SPACE and dino.alive:
-                    dino.release_jump()  # Release jump when spacebar is released
-
-        # Moving and drawing dino
+        # If the dino is alive, update its movements
         if dino.alive:
             dino.move()
         dino.draw(screen)
 
-        # Spawn obstacles
-        if len(obstacles) == 0 or obstacles[-1].x < WIDTH - random.randint(250, 350):
+        # Spawn obstacles with increased space between them
+        if random.randint(1, 150) <= 3:  # 3% chance to spawn obstacle with greater gap
             obstacles.append(Obstacle(WIDTH, 5))
 
-        # Draw obstacles
+        # Move and draw obstacles
         for obstacle in obstacles:
             obstacle.move()
             obstacle.draw(screen)
-            if obstacle.is_colliding(dino) and dino.alive:
-                lives -= 1
-                obstacles.remove(obstacle)  # Remove obstacle upon collision
-                if lives == 0:
-                    dino.die()  # Dino dies if no lives remain
 
-        # Handle lava
-        for lava_stream in lava:
-            lava_stream.move()
-            lava_stream.draw(screen)
-            if lava_stream.is_colliding(dino):
-                lives -= 1  # Lose a life if hit by lava
-                lava.remove(lava_stream)
-                if lives == 0:
-                    dino.die()
+            if obstacle.is_colliding(dino):  # If the dino collides with the obstacle
+                if not dino.invincible:  # Only take damage if not invincible
+                    if dino.take_damage():  # The dino takes damage
+                        lives -= 1
+                        if lives <= 0:  # If no lives are left, game over
+                            dino.alive = False
+                            game_over = True
 
-        # Handle meteors
-        if random.randint(1, 100) == 1:
-            meteors.append(Meteor(WIDTH, 5))
+        # Spawn meteors with decreased spawn rate
+        if random.randint(1, 100) <= 2:  # 2% chance to spawn meteor
+            meteors.append(Meteor(random.randint(0, WIDTH), 5))
 
+        # Move and draw meteors
         for meteor in meteors:
             meteor.move()
             meteor.draw(screen)
-            if meteor.is_colliding(dino):
-                dino.die()  # Dino dies if hit by a meteor
-                meteors.remove(meteor)
 
-        # Handle volcano (random event)
-        if random.randint(1, 500) == 1:
-            volcano.activate()
+            if meteor.is_colliding(dino):  # If the dino collides with the meteor
+                if not dino.invincible:  # Only take damage if not invincible
+                    if dino.take_damage():  # The dino takes damage
+                        lives -= 1
+                        if lives <= 0:  # If no lives are left, game over
+                            dino.alive = False
+                            game_over = True
 
-        # Draw volcano and lava
+        # Spawn lava
+        if random.randint(1, 100) <= 4:  # 4% chance to spawn lava
+            lava.append(Lava(volcano.x))
+
+        # Move and draw lava
+        for lava_block in lava:
+            lava_block.move()
+            lava_block.draw(screen)
+
+            if lava_block.is_colliding(dino):  # If the dino collides with the lava
+                if not dino.invincible:  # Only take damage if not invincible
+                    if dino.take_damage():  # The dino takes damage
+                        lives -= 1
+                        if lives <= 0:  # If no lives are left, game over
+                            dino.alive = False
+                            game_over = True
+
+        # Move and draw the volcano
+        volcano.move()
         volcano.draw(screen)
-        if volcano.active:
-            if random.randint(1, 100) == 1:
-                lava.append(Lava(volcano.x))
 
-        # Update score and display it
-        score = pygame.time.get_ticks() // 1000  # 1 point every second
-        font = pygame.font.SysFont(None, 30)
-        score_text = font.render(f"Score: {score}", True, BLACK)
-        screen.blit(score_text, (10, 10))
+        # Update invincibility state
+        dino.update_invincibility()
 
-        # Draw hearts representing lives at the top right
-        draw_lives(screen, lives)
-
-        # Check for game over
-        if lives == 0:
-            font = pygame.font.SysFont(None, 50)
-            game_over_text = font.render("GAME OVER", True, BLACK)
-            screen.blit(game_over_text, (WIDTH // 3, HEIGHT // 3))
-
-            restart_text = font.render("Press 'R' to Restart", True, BLACK)
+        # Display game over screen
+        if game_over:
+            font = pygame.font.SysFont(None, 55)
+            restart_text = font.render("Game Over! Press 'R' to Restart", True, BLACK)
             screen.blit(restart_text, (WIDTH // 3, HEIGHT // 2))
-
-            dino.flip_over = True  # Flip the dino over on game over
 
         pygame.display.update()
         clock.tick(60)
 
-    pygame.quit()
+# Start the game loop
+game_loop()
 
-# Run the game
-game_loop() 
+# Quit pygame
+pygame.quit()
