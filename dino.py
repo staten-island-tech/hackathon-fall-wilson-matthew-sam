@@ -220,6 +220,7 @@ def game_loop():
     clock = pygame.time.Clock()
     run_game = True
     game_over = False  # Track game over state
+    obstacle_gap = 200  # Set the minimum gap between obstacles
 
     while run_game:
         screen.fill(DAY_COLOR if score % 2 == 0 else NIGHT_COLOR)  # Day/Night cycle
@@ -247,7 +248,7 @@ def game_loop():
         dino.draw(screen)
 
         # Spawn obstacles with increased space between them
-        if random.randint(1, 150) <= 3:  # 3% chance to spawn obstacle with greater gap
+        if random.randint(1, obstacle_gap) <= 3:  # Reduce the frequency and increase the gap between obstacles
             obstacles.append(Obstacle(WIDTH, 5))
 
         # Move and draw obstacles
@@ -313,8 +314,5 @@ def game_loop():
         pygame.display.update()
         clock.tick(60)
 
-# Start the game loop
+# Run the game loop
 game_loop()
-
-# Quit pygame
-pygame.quit()
