@@ -233,7 +233,7 @@ class Enemy:
             print(f"{self.name} attacks {player.name} for {damage} damage!")
             player.take_damage(damage)
 
-def shoot(self, player):
+    def shoot(self, player):
         current_time = time.time()
         if current_time - self.last_shot_time > (1 / self.erate):  
             direction_x = player.x - self.x
@@ -245,28 +245,37 @@ def shoot(self, player):
             self.projectiles.append(projectile)
             self.last_shot_time = current_time
 
-def update_projectiles(self):
+    def update_projectiles(self):
         for projectile in self.projectiles:
             projectile.update()  
 
-def draw(self):
+    def draw(self):
         pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height))
         for projectile in self.projectiles:
-            projectile.draw()  
+            projectile.draw()
 
-def distance_to_player(self, player):
-        return math.sqrt((self.x - player.x)**2 + (self.y - player.y)**2)
+    # New method to calculate distance to player
+    def distance_to_player(self, player):
+        return math.sqrt((self.x - player.x) ** 2 + (self.y - player.y) ** 2)
 
-def spawn(self, dungeon):
+    def spawn(self, dungeon):
         while True:
             x = random.randint(1, dungeon.width - 1) * TILE_SIZE
             y = random.randint(1, dungeon.height - 1) * TILE_SIZE
             grid_x = x // TILE_SIZE
             grid_y = y // TILE_SIZE
-            if dungeon.grid[grid_y][grid_x] == 0:  # 0 represents a path
+            if dungeon.grid[grid_y][grid_x] == 0: 
                 self.x = x
                 self.y = y
                 break
+
+    def remove_from_game(self, dungeon):
+        self.x = -TILE_SIZE  
+        self.y = -TILE_SIZE
+        self.projectiles.clear()
+        self.ehp = 0  
+        dungeon.grid[self.y // TILE_SIZE][self.x // TILE_SIZE] = 0 
+
 Monster = Enemy(ename="Monster", x=100, y=100, ehp=100, eattack=5, espeed=8, erate=2) 
 
 def remove_from_game(self, dungeon):
@@ -322,23 +331,39 @@ class Projectile:
         player_rect = pygame.Rect(player.x, player.y, player.width, player.height)
         projectile_rect = pygame.Rect(self.x, self.y, self.width, self.height)
         return player_rect.colliderect(projectile_rect)
-
+    
 class Game:
     def __init__(self):
         self.initial_spawn_position = (1 * TILE_SIZE, 1 * TILE_SIZE)  
+        
         self.dungeon = Dungeon(SCREEN_WIDTH // TILE_SIZE, SCREEN_HEIGHT // TILE_SIZE)
-        self.player = Player(self.initial_spawn_position[0], self.initial_spawn_position[1])  
-        self.monster = Monster(0, 0)
-        self.monster.spawn(self.dungeon)
+        
+        self.player = Player(self.initial_spawn_position[0], self.initial_spawn_position[1], 
+                             "Player1", 20, 2, 100, 15)  
+
+        self.monster = Enemy(ename="Monster", x=100, y=100, ehp=100, eattack=5, espeed=8, erate=2)
+        
+        while True:
+            x = random.randint(1, self.dungeon.width - 1) * TILE_SIZE
+            y = random.randint(1, self.dungeon.height - 1) * TILE_SIZE
+            grid_x = x // TILE_SIZE
+            grid_y = y // TILE_SIZE
+            if self.dungeon.grid[grid_y][grid_x] == 0:
+                self.monster.x = x
+                self.monster.y = y
+                break
+
         self.merchant = Merchant()
-        self.merchant.spawn(self.dungeon) 
+        self.merchant.spawn(self.dungeon)
+        
         self.fight_started = False
         self.proximity_message = ""  
         self.font = pygame.font.Font(None, 36)
         self.running = True
         self.score = 0 
         self.merchant_menu_active = False  
-        self.previous_player_position = None  
+        self.previous_player_position = None
+
 
     def reset_game(self):
         self.dungeon = Dungeon(SCREEN_WIDTH // TILE_SIZE, SCREEN_HEIGHT // TILE_SIZE)
@@ -350,6 +375,7 @@ class Game:
         self.fight_started = False
         self.proximity_message = ""  
         self.score = 0  
+
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -408,45 +434,59 @@ class Game:
         self.fight_started = False
         self.proximity_message = ""  
 
-    def update(self):
-        if self.player.hp <= 0:  
-            self.reset_game()  
-            return  
+def update(self):
+    if self.player.hp <= 0:  
+        self.reset_game()  
+        return  
 
-        if self.monster.hp <= 0:
-            self.monster.remove_from_game(self.dungeon)
-            self.dungeon.restore_walls() 
-            self.end_boss_fight() 
-            self.score += 10  
-            return  
+    if self.monster.ehp <= 0:
+        self.monster.remove_from_game(self.dungeon)
+        self.dungeon.restore_walls() 
+        self.end_boss_fight() 
+        self.score += 10  
+        return  
 
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_a]: 
-            self.player.move(-PLAYER_SPEED, 0, self.dungeon, [self.monster])
-        if keys[pygame.K_d]:  
-            self.player.move(PLAYER_SPEED, 0, self.dungeon, [self.monster])
-        if keys[pygame.K_w]:  
-            self.player.move(0, -PLAYER_SPEED, self.dungeon, [self.monster])
-        if keys[pygame.K_s]:  
-            self.player.move(0, PLAYER_SPEED, self.dungeon, [self.monster])
+    keys = pygame.key.get_pressed()
+    
+    dx = 0  # Horizontal movement
+    dy = 0  # Vertical movement
+    
+    if keys[pygame.K_a]:  # Move left
+        dx = -PLAYER_SPEED
+    if keys[pygame.K_d]:  # Move right
+        dx = PLAYER_SPEED
+    if keys[pygame.K_w]:  # Move up
+        dy = -PLAYER_SPEED
+    if keys[pygame.K_s]:  # Move down
+        dy = PLAYER_SPEED
+    
+    # Apply movement if valid
+    self.player.move(dx, dy, self.dungeon, [self.monster])
 
-        if self.fight_started and pygame.mouse.get_pressed()[0]: 
-            self.player.shoot()
+    if self.fight_started and pygame.mouse.get_pressed()[0]: 
+        self.player.shoot()
 
-        self.proximity_message = ""
-        if not self.fight_started:
-            dist = self.monster.distance_to_player(self.player)
-            if dist <= PROXIMITY_RANGE:
-                self.proximity_message = "Press Space to Fight"
+    self.proximity_message = ""
+    if not self.fight_started:
+        dist = self.monster.distance_to_player(self.player)
+        if dist <= PROXIMITY_RANGE:
+            self.proximity_message = "Press Space to Fight"
 
-            dist_merchant = self.merchant.distance_to_player(self.player)
-            if dist_merchant <= PROXIMITY_RANGE:
-                self.proximity_message = "Press Space to Open Merchant Menu"
+        dist_merchant = self.merchant.distance_to_player(self.player)
+        if dist_merchant <= PROXIMITY_RANGE:
+            self.proximity_message = "Press Space to Open Merchant Menu"
 
-        if self.fight_started:
-            self.monster.shoot(self.player)
-            self.monster.update_projectiles(self.player)
-            self.player.update_bullets(self.monster)
+    if self.fight_started:
+        self.monster.shoot(self.player)
+        self.monster.update_projectiles(self.player)
+        self.player.update_bullets(self.monster)
+
+def run(self):
+    while self.running:
+        self.handle_events()
+        self.update()
+        self.draw()
+        clock.tick(FPS)
 
     def draw(self):
         screen.fill(BLACK)
@@ -484,15 +524,12 @@ class Game:
         item_text = self.font.render("1. Buy Health Potion - 10 Gold", True, WHITE)
         screen.blit(item_text, (SCREEN_WIDTH // 2 - item_text.get_width() // 2, SCREEN_HEIGHT // 3 + 50))
 
-    def run(self):
-        while self.running:
-            self.handle_events()
-            self.update()
-            self.draw()
-            clock.tick(FPS)
-
 game = Game()
 
 game.run()
 
 pygame.quit()
+
+if __name__ == "__main__":
+    game = Game()  
+    game.run()  
